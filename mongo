@@ -1,0 +1,61 @@
+//On utilise notre BDD
+
+use mydb
+
+//On initialise une variable c pour convertir les degrés en radian.
+
+var c = Math.PI/180;
+
+//On calcul les distances entre les centres hospitalié les plus proches et les différentes maisons de notre base
+
+db.home.find().forEach( function(home) { 
+	db.health.find().forEach( function(h) { 
+var φ1 = home.latitude*c, φ2 = h.latitude*c, Δλ = (h.longitude-home.longitude)*c, R = 6371;
+var d = Math.acos( Math.sin(φ1)*Math.sin(φ2) + Math.cos(φ1)*Math.cos(φ2) * Math.cos(Δλ) ) * R;
+db.home.update({_id:home._id}, {$min:{"distanceHopital":d}});
+	})
+})
+
+
+//On calcul les distances entre les stations de metro les plus proches et les différentes maisons de notre base
+
+db.home.find().forEach( function(home) { 
+db.inter.insert({_id:home._id},{$push:{"distanceArt":0}});
+	})
+db.home.find().forEach( function(home) { 
+	db.sub.find().forEach( function(h) { 
+var φ1 = home.latitude*c, φ2 = h.latitude*c, Δλ = (h.longitude-home.longitude)*c, R = 6371;
+var d = Math.acos( Math.sin(φ1)*Math.sin(φ2) + Math.cos(φ1)*Math.cos(φ2) * Math.cos(Δλ) ) * R;
+db.inter.update({_id:home._id},{$push:{"distanceArt":d}});
+db.home.update({_id:home._id}, {$min:{"minDistanceArt":d}});
+	})
+})
+
+
+//On calcul les distances entre les stations de metro les plus proches et les différentes maisons de notre base
+
+db.home.find().forEach( function(home) { 
+	db.sub.find().forEach( function(h) { 
+var φ1 = home.latitude*c, φ2 = h.latitude*c, Δλ = (h.longitude-home.longitude)*c, R = 6371;
+var d = Math.acos( Math.sin(φ1)*Math.sin(φ2) + Math.cos(φ1)*Math.cos(φ2) * Math.cos(Δλ) ) * R;
+db.home.update({_id:home._id}, {$min:{"distanceMetro":d}});
+	})
+})
+
+// On calcule le score associé à chaque maison
+db.home.find().forEach( function(home) { 
+var score = 0.2*home.distanceHopital + 0.1*home.minDistanceArt + 0.7*home.distanceMetro;
+db.home.update({_id:home._id}, {$set:{"score":score}});
+})
+
+db.home.aggregate([
+    {$group: {
+          _id : "$name",
+          meilleur : {$min:"$score"}
+        }
+    }
+    ,{ $sort: { meilleur : 1 } }
+    ,{$project : { gender : 1 , poorest : 1 }}
+    }
+   ,{ $limit: 1 }
+    ])
