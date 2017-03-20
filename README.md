@@ -1,4 +1,4 @@
-"# noSQL" 
+
 1)sous linux $ sudo service mongodb start
 
 2)Exécuter script noSql.py .Cela importe les données du projet
